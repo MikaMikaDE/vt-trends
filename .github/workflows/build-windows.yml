@@ -1,13 +1,24 @@
-name: Build Windows EXE
+name: Build Releases
 
 on:
-  workflow_dispatch:
   push:
-    branches: [main]
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            name: voicetrend-windows-x64.exe
+          - os: ubuntu-latest
+            name: voicetrend-linux-x64
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -23,12 +34,44 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build EXE
+      - name: Build
         run: |
           pyinstaller --clean --onefile --name voicetrend voicetrend.py
 
-      - name: Upload EXE
+      - name: Rename executable
+        shell: bash
+        run: |
+          mv dist/voicetrend "${{ matrix.name }}" 2>/dev/null || mv dist/voicetrend.exe "${{ matrix.name }}"
+
+      - name: Upload build
         uses: actions/upload-artifact@v4
         with:
-          name: voicetrend-windows
-          path: dist/voicetrend.exe
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Windows build
+        uses: actions/download-artifact@v5
+        with:
+          name: voicetrend-windows-x64.exe
+          path: release
+
+      - name: Download Linux build
+        uses: actions/download-artifact@v5
+        with:
+          name: voicetrend-linux-x64
+          path: release
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            release/voicetrend-windows-x64.exe \
+            release/voicetrend-linux-x64 \
+            --title "VoiceTrend ${{ github.ref_name }}" \
+            --generate-notes
