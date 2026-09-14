@@ -47,6 +47,18 @@ try:
 except ImportError:
     sys.exit("Missing dependency. Run: pip install matplotlib")
 
+from pathlib import Path
+import shutil
+
+# Find bundled FFmpeg when running the packaged application.
+if getattr(sys, "frozen", False): APP_DIR = Path(sys.executable).resolve().parent
+else                            : APP_DIR = Path(__file__      ).resolve().parent
+
+FFMPEG_NAME    = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+BUNDLED_FFMPEG = APP_DIR / FFMPEG_NAME
+
+if BUNDLED_FFMPEG.exists():          os.environ["PATH"] = str(APP_DIR) + os.pathsep + os.environ.get("PATH", "")
+elif shutil.which("ffmpeg") is None: sys.exit("FFmpeg was not found. Please use the VoiceTrend package which includes FFmpeg.")
 
 AUDIO_EXT = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".wma", ".opus"}
 CACHE_NAME = ".voicetrend_cache.json"
