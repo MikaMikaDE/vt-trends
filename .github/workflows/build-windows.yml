@@ -138,5 +138,6 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             release/voicetrend-windows-x64.zip \
             release/voicetrend-linux-x64.tar.gz \
+            --repo "${{ github.repository }}" \
             --title "VoiceTrend ${{ github.ref_name }}" \
             --generate-notes
